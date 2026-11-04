@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+findings.json
+*.db
+terraform/fn.zip
+planted.json
+.moto.pid
+moto.log
+state.json
