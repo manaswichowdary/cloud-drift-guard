@@ -96,6 +96,11 @@ I ran this against a real AWS account (a new account on the free plan, us-east-1
   it as high severity and sent a Slack alert. I ran the check by hand about a minute after the change, so this shows
   that detection works, not how fast a schedule would catch it. It also flagged a bucket that exists in AWS but not
   in Terraform, which was a true finding (the SageMaker SDK created it).
+- **Timing and the full incident:** with a scan running every 60 seconds from a timer on my laptop, I added an "all
+  traffic from anywhere" rule to a security group at 17:46:08. The next scan found it 10 seconds later and the Slack
+  alert arrived in the same minute. That was lucky timing: a scan takes about 25 seconds, so the worst case is about
+  85 seconds. I fixed it with `terraform apply` at 17:48:34 and the next scan confirmed it, 14 seconds later. The write
+  up is in `docs/postmortem.md` and the response steps are in `docs/runbook.md`.
 - **Slack:** a real alert with the new findings arrived in a channel. A repeat scan with nothing changed reported 0 new findings, so there was nothing to send.
 - **Fix pull request:** it opened a real pull request with two safe fixes (S3 versioning and a password policy)
   against a separate demo repo: https://github.com/manaswichowdary/drift-guard-demo-infra/pull/1
@@ -136,6 +141,11 @@ Not measured yet: minutes from drift to alert, false alerts per week, and a run 
 ## Status
 
 - Done: 17 security and waste rules, drift check, cost jump check, findings table, Slack alert format, safe fix
-  proposals, pull request opener, Terraform environment with 12 planted mistakes, measurement tool, CI.
-- Not done yet: a scheduled Lambda deployment, a runbook, a postmortem for a simulated incident, and a run against a
-  real AWS account.
+  proposals, pull request opener, Terraform environment with planted mistakes, measurement tool, CI, a runbook, a
+  postmortem for one simulated incident, and a scheduled scan workflow (GitHub Actions, every 5 minutes).
+- Run on a real AWS account: 11 of 11 planted mistakes caught, a real Slack alert, a real fix pull request, and real
+  drift caught. Details are in the results section above.
+- Not proven yet: the GitHub schedule itself (the workflow works when started by hand and takes about 18 seconds,
+  but GitHub had not started its first scheduled run after more than 40 minutes), and a real Cost Explorer result
+  (AWS needs up to 24 hours to fill data on a new account).
+- Not built: a Lambda and EventBridge deployment, which would be a more reliable schedule than GitHub's.
