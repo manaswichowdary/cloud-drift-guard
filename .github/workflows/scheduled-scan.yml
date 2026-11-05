@@ -1,0 +1,49 @@
+name: scheduled-scan
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      # The findings database is how the scanner remembers what it already
+      # alerted on. Restore the latest copy, scan, then save the new copy.
+      - name: Restore findings memory
+        uses: actions/cache/restore@v4
+        with:
+          path: findings.db
+          key: findings-db-${{ github.run_id }}
+          restore-keys: findings-db-
+
+      - name: Scan the AWS account and alert on new findings
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: python -m scanner.cli scan --slack
+
+      - name: Save findings memory
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: findings.db
+          key: findings-db-${{ github.run_id }}
