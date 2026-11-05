@@ -72,8 +72,15 @@ def cmd_drift(args):
 
 
 def cmd_cost(args):
+    from botocore.exceptions import ClientError
     session = _session(args)
-    finding = cost.spend_jump(cost.fetch_daily_costs(session))
+    try:
+        daily = cost.fetch_daily_costs(session)
+    except ClientError as e:
+        code = e.response["Error"]["Code"]
+        print(f"Cost Explorer is not ready ({code}). Turn it on in the Billing console. Data appears within 24 hours.")
+        return 1
+    finding = cost.spend_jump(daily)
     print(finding.message if finding else "No unusual spend jump.")
     return 0
 
