@@ -15,7 +15,7 @@ import os
 import boto3
 from botocore.exceptions import ClientError
 
-from scanner import alerts, cost
+from scanner import accepted, alerts, cost
 from scanner.runner import run_all
 from scanner.store import Store
 
@@ -55,6 +55,7 @@ def handler(event, context, s3=None, session=None, post=None):
     had_db = download_db(s3, bucket, DB_PATH)
 
     findings, errors = run_all(session or boto3.Session())
+    findings, accepted_findings = accepted.split(findings, accepted.load())
     store = Store(DB_PATH)
     try:
         new, resolved = store.record(findings, kinds=KINDS)
@@ -63,7 +64,7 @@ def handler(event, context, s3=None, session=None, post=None):
     s3.upload_file(DB_PATH, bucket, DB_KEY)
 
     summary = {"findings": len(findings), "new": len(new), "resolved": len(resolved),
-               "rule_errors": len(errors), "started_from_existing_db": had_db}
+               "accepted": len(accepted_findings), "rule_errors": len(errors), "started_from_existing_db": had_db}
     print(summary)
 
     message = build_message(new, errors)

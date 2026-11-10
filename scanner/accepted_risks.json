@@ -1,0 +1,26 @@
+[
+  {
+    "rule_id": "S3-LOGGING",
+    "resource": "marketlens-data-*",
+    "reason": "Private bucket with public access blocked. Access logging needs a second bucket, which would be flagged for the same reason.",
+    "review_by": "2027-02-10"
+  },
+  {
+    "rule_id": "S3-LOGGING",
+    "resource": "drift-guard-data-*",
+    "reason": "Private bucket that only holds the findings table, public access blocked and versioning on.",
+    "review_by": "2027-02-10"
+  },
+  {
+    "rule_id": "S3-LOGGING",
+    "resource": "sagemaker-us-*",
+    "reason": "Default buckets created by the SageMaker SDK for model code. Nothing sensitive is stored in them.",
+    "review_by": "2027-02-10"
+  },
+  {
+    "rule_id": "S3-LOGGING",
+    "resource": "cloudtrail-logs-*",
+    "reason": "CloudTrail already records access to the account. Logging this bucket too would need another bucket.",
+    "review_by": "2027-02-10"
+  }
+]

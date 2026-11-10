@@ -112,6 +112,13 @@ def ensure_role(iam, bucket):
 
 
 def ensure_function(lam, role_arn, bucket, key, env, role_is_new=False):
+    if "SLACK_WEBHOOK_URL" not in env:      # a redeploy must not silently drop the webhook that is already saved
+        try:
+            saved = lam.get_function_configuration(FunctionName=FUNCTION).get("Environment", {}).get("Variables", {})
+            if saved.get("SLACK_WEBHOOK_URL"):
+                env = {**env, "SLACK_WEBHOOK_URL": saved["SLACK_WEBHOOK_URL"]}
+        except ClientError:
+            pass
     config = dict(Runtime=RUNTIME, Role=role_arn, Handler="scanner.lambda_handler.handler", Timeout=300,
                   MemorySize=512, Environment={"Variables": env})
     code = {"S3Bucket": bucket, "S3Key": key}

@@ -77,3 +77,11 @@ def test_running_the_deploy_twice_is_safe(aws, tmp_path):
     assert cfg["Environment"]["Variables"]["SLACK_WEBHOOK_URL"] == "https://hooks.example/y"
     assert aws.client("events").describe_rule(Name=d.RULE)["ScheduleExpression"] == "rate(15 minutes)"
     assert len(aws.client("events").list_targets_by_rule(Rule=d.RULE)["Targets"]) == 1
+
+
+def test_a_redeploy_without_a_webhook_keeps_the_saved_one(aws, tmp_path):
+    z = tiny_zip(tmp_path)
+    d.deploy(aws, REGION, BUCKET, z, "https://hooks.example/x")
+    d.deploy(aws, REGION, BUCKET, z)                        # no webhook supplied this time
+    cfg = aws.client("lambda").get_function_configuration(FunctionName=d.FUNCTION)
+    assert cfg["Environment"]["Variables"]["SLACK_WEBHOOK_URL"] == "https://hooks.example/x"

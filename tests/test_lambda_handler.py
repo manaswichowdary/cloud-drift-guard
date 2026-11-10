@@ -90,3 +90,13 @@ def test_scans_a_real_fake_account_end_to_end(s3, monkeypatch):
     out = lh.handler({}, None, s3=s3, session=aws, post=post)
     assert out["findings"] > 0 and out["rule_errors"] == 0
     assert post.sent and "planted-open-bucket" in post.sent[0]
+
+
+def test_accepted_findings_are_counted_but_never_alerted(s3, monkeypatch):
+    from scanner import accepted
+    monkeypatch.setattr(lh.accepted, "load", lambda: [{"rule_id": "S3-LOGGING", "resource": "quiet-*",
+                                                       "reason": "r", "review_by": "2999-01-01"}])
+    scan_returns(monkeypatch, [finding("S3-LOGGING", "quiet-bucket")])
+    post = FakePost()
+    out = lh.handler({}, None, s3=s3, session=object(), post=post)
+    assert out["accepted"] == 1 and out["new"] == 0 and post.sent == []
