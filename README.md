@@ -104,9 +104,10 @@ I ran this against a real AWS account (a new account on the free plan, us-east-1
 - **Slack:** a real alert with the new findings arrived in a channel. A repeat scan with nothing changed reported 0 new findings, so there was nothing to send.
 - **Fix pull request:** it opened a real pull request with two safe fixes (S3 versioning and a password policy)
   against a separate demo repo: https://github.com/manaswichowdary/drift-guard-demo-infra/pull/1
-- **Cost Explorer:** the real call reached AWS but returned "data not available", because Cost Explorer takes up to
-  24 hours to fill on a new account. The tool now prints a clear message instead of a stack trace. The spend jump
-  logic is covered by tests, and not yet by real data.
+- **Cost Explorer:** the real call works. On the first try, minutes after switching Cost Explorer on, AWS returned
+  "data not available", which the tool now reports as a clear message. Once the data filled in, the real call
+  returned no unusual spend jump. This account spends close to nothing, so that shows the call and permissions work,
+  not that the spike detection has caught a real spike. That logic is covered by tests.
 
 ## Decisions I made
 
@@ -142,10 +143,11 @@ Not measured yet: minutes from drift to alert, false alerts per week, and a run 
 
 - Done: 17 security and waste rules, drift check, cost jump check, findings table, Slack alert format, safe fix
   proposals, pull request opener, Terraform environment with planted mistakes, measurement tool, CI, a runbook, a
-  postmortem for one simulated incident, and a scheduled scan workflow (GitHub Actions, every 5 minutes).
+  postmortem for one simulated incident, and a scheduled scan workflow (GitHub Actions, set to every 5 minutes).
 - Run on a real AWS account: 11 of 11 planted mistakes caught, a real Slack alert, a real fix pull request, and real
   drift caught. Details are in the results section above.
-- Not proven yet: the GitHub schedule itself (the workflow works when started by hand and takes about 18 seconds,
-  but GitHub had not started its first scheduled run after more than 40 minutes), and a real Cost Explorer result
-  (AWS needs up to 24 hours to fill data on a new account).
+- GitHub schedule result: the workflow is set to run every 5 minutes, but GitHub ran it only about 4 times a day. The
+  first run came 6 hours 41 minutes after I pushed it, the typical gap was about 6.3 hours, the longest gap was about
+  10.6 hours, and none of the 22 runs failed. GitHub's free scheduler is best effort, so I switched it off. The 85
+  second alert time above came from a scan loop on my laptop, not from this schedule.
 - Not built: a Lambda and EventBridge deployment, which would be a more reliable schedule than GitHub's.

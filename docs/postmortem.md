@@ -24,9 +24,9 @@ The group was open for about 2 minutes and 26 seconds.
 
 A scan takes about 25 seconds and the timer waited 60 seconds between scans, so the worst case from change to alert
 was about 85 seconds. This test happened to be caught 10 seconds after the change, so it was lucky timing and not the
-typical case. The scans ran from a timer on my laptop. The same scan is set up as a GitHub Actions schedule every 5
-minutes, but GitHub had not started its first scheduled run after more than 30 minutes, so that part is not yet
-proven.
+typical case. The scans ran from a timer on my laptop. The same scan is set up as a GitHub Actions schedule set to every 5
+minutes, but GitHub's free scheduler ran it only about 4 times a day (first run 6 hours 41 minutes after the push,
+typical gap about 6.3 hours), so the 85 second figure does not apply to that schedule.
 
 ## Root cause
 
