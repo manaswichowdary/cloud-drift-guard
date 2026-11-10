@@ -82,6 +82,12 @@ def test_running_the_deploy_twice_is_safe(aws, tmp_path):
 def test_a_redeploy_without_a_webhook_keeps_the_saved_one(aws, tmp_path):
     z = tiny_zip(tmp_path)
     d.deploy(aws, REGION, BUCKET, z, "https://hooks.example/x")
-    d.deploy(aws, REGION, BUCKET, z)                        # no webhook supplied this time
+    info = d.deploy(aws, REGION, BUCKET, z)                 # no webhook supplied this time
+    assert info["slack"] is True                            # reports what is saved, not what was passed in
     cfg = aws.client("lambda").get_function_configuration(FunctionName=d.FUNCTION)
     assert cfg["Environment"]["Variables"]["SLACK_WEBHOOK_URL"] == "https://hooks.example/x"
+
+
+def test_deploy_reports_no_slack_when_none_is_saved(aws, tmp_path):
+    z = tiny_zip(tmp_path)
+    assert d.deploy(aws, REGION, BUCKET, z)["slack"] is False
