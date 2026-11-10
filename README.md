@@ -140,15 +140,38 @@ bucket itself has no versioning or access logging.
 Not measured yet: false alerts per week over a long run. The time from a change to an alert was measured once on the
 real account (see the section above).
 
+## Scheduled scan on AWS
+
+The scan now runs on its own as an AWS Lambda function (`drift-guard-scan`), started by EventBridge every 5 minutes.
+`deploy/deploy_aws.py` creates everything: the function, a read only role, the schedule, and a private versioned S3
+bucket that holds the findings table between runs. It is safe to run again, and a redeploy keeps the saved Slack
+webhook.
+
+- **Alerts:** a Slack message goes out only when a finding is new. A repeat scan with nothing changed stays quiet.
+  If one of the rules fails to run, that also alerts, and the function reports an error so it shows up in AWS.
+- **Permissions:** the role has an explicit list of read actions, not a broad policy. A test checks that every call
+  the rules make is on that list, so a new rule cannot quietly need more access.
+- **First real run:** the first scheduled scan found 10 findings in my account. I fixed the real ones: I created a
+  multi region CloudTrail trail with its own log bucket and log file validation, set an IAM password policy, turned
+  on versioning for two SageMaker buckets, and removed an open rule from the default security group. The scans after
+  that went 10, then 6 (5 resolved, 1 new from the log bucket I had just created), then 0 open.
+- **Accepted risks:** `scanner/accepted_risks.json` lists findings I chose to accept, each with a reason and a review
+  date. Right now that is S3 access logging on 5 buckets (it would need yet another bucket to hold the logs). Accepted
+  findings are counted but do not alert, and they come back automatically once the review date passes.
+- **Limits:** the EC2 checks cover us-east-1 only. Cost Explorer and the Terraform drift check are not in the
+  schedule: Cost Explorer charges for every request, which would be about $86 a month at one call every 5 minutes.
+  If a deploy and its first scan overlap with the first scheduled scan, two scans can run at once and send a
+  duplicate alert. That happened once and is harmless. I have not measured how long an alert takes on this schedule.
+
 ## Status
 
 - Done: 17 security and waste rules, drift check, cost jump check, findings table, Slack alert format, safe fix
   proposals, pull request opener, Terraform environment with planted mistakes, measurement tool, CI, a runbook, a
-  postmortem for one simulated incident, and a scheduled scan workflow (GitHub Actions, set to every 5 minutes).
+  postmortem for one simulated incident, a scheduled scan workflow (GitHub Actions, now switched off), and a scheduled scan on AWS Lambda with EventBridge (see the scheduled scan section above).
 - Run on a real AWS account: 11 of 11 planted mistakes caught, a real Slack alert, a real fix pull request, and real
   drift caught. Details are in the results section above.
 - GitHub schedule result: the workflow is set to run every 5 minutes, but GitHub ran it only about 4 times a day. The
   first run came 6 hours 41 minutes after I pushed it, the typical gap was about 6.3 hours, the longest gap was about
   10.6 hours, and none of the 22 runs failed. GitHub's free scheduler is best effort, so I switched it off. The 85
   second alert time above came from a scan loop on my laptop, not from this schedule.
-- Not built: a Lambda and EventBridge deployment, which would be a more reliable schedule than GitHub's.
+- Not in the AWS schedule: Cost Explorer, the Terraform drift check, and regions other than us-east-1. They still run by hand from the command line.
