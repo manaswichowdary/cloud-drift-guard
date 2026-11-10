@@ -1,10 +1,18 @@
 # Cloud Drift Guard
 
+[![ci](https://github.com/manaswichowdary/cloud-drift-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/manaswichowdary/cloud-drift-guard/actions/workflows/ci.yml)
+
 A scanner for an AWS account. It looks for security mistakes, wasted spend and drift (things that were
 changed by hand after Terraform built them). It tells you what is wrong and how to fix it, alerts on
 Slack only when something is new, and can open a pull request for the few fixes that are safe to automate.
 
 I built it for small teams that do not have a cloud engineer.
+
+**The problem.** Small teams make the same cloud mistakes (logging switched off, ports open to the internet, resources nobody remembers) and have nobody watching. Tools that do watch often send so many alerts that people stop reading them.
+
+**The result.** On a real AWS account it caught 11 of 11 deliberately planted mistakes. Its first scheduled scan of my own account found 10 real issues; I fixed them, and the scan now reports 0 open findings, with 5 accepted risks written down with review dates. It runs on AWS Lambda every 5 minutes.
+
+**One hard decision.** What may be fixed automatically and what should only alert. Only new findings send a Slack message, only two low risk fixes (S3 versioning and a password policy) can open a pull request, and the scanner's IAM role has an explicit list of read actions instead of a broad policy.
 
 ## What it checks
 
@@ -42,6 +50,18 @@ scan or schedule -> rules, drift check and cost check -> findings table (SQLite)
 ```
 
 The findings table is what keeps alerts rare. A finding is sent once, again only if it was fixed and came back.
+
+On AWS, the scheduled version looks like this:
+
+```mermaid
+flowchart LR
+    EB["EventBridge, every 5 minutes"] --> L["Lambda: drift-guard-scan"]
+    L -->|"read only"| ACC["AWS account: EC2, S3, IAM, CloudTrail, Lambda"]
+    DB[("S3: findings.db")] <--> L
+    AR["accepted_risks.json"] --> L
+    L -->|"new findings only"| SL["Slack: drift alerts channel"]
+    L --> LG["CloudWatch logs"]
+```
 
 ## Try it without touching a real account
 
@@ -175,3 +195,11 @@ webhook.
   10.6 hours, and none of the 22 runs failed. GitHub's free scheduler is best effort, so I switched it off. The 85
   second alert time above came from a scan loop on my laptop, not from this schedule.
 - Not in the AWS schedule: Cost Explorer, the Terraform drift check, and regions other than us-east-1. They still run by hand from the command line.
+
+## What I would do next
+
+- Scan regions other than us-east-1. The EC2 checks only look at one region today.
+- Run Cost Explorer and the Terraform drift check once a day. Cost Explorer charges per request, so a 5 minute schedule would cost about $86 a month.
+- Measure how long a change takes to reach Slack on the Lambda schedule. I measured 10 seconds with a loop on my laptop, but not on Lambda.
+- Stop two overlapping scans from sending a duplicate alert. It happened once, right after a deploy.
+- Record a 90 second demo: change a security group, watch the alert arrive in Slack, then fix it.
