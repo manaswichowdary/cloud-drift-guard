@@ -124,7 +124,7 @@ sorted worst first. Cost jumps need at least $1 a day, so a change from 2 cents 
 **Waste estimates are rough.** Unused volumes are priced at gp3 list price and unused Elastic IPs at the public IPv4
 hourly rate. Idle instances are flagged but not priced.
 
-## Results
+## Results on a fake AWS (moto)
 
 Run against a fake AWS (moto server), with the Terraform sample environment applied:
 
@@ -137,7 +137,8 @@ Run against a fake AWS (moto server), with the Terraform sample environment appl
 The scan also reports 4 findings I did not plant, all true: no CloudTrail trail, no password policy, and the log
 bucket itself has no versioning or access logging.
 
-Not measured yet: minutes from drift to alert, false alerts per week, and a run against a real AWS account.
+Not measured yet: false alerts per week over a long run. The time from a change to an alert was measured once on the
+real account (see the section above).
 
 ## Status
 
